@@ -1,5 +1,6 @@
 package io.jenkins.update_center;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.util.VersionNumber;
 import org.apache.commons.io.IOUtils;
 import org.kohsuke.args4j.Option;
@@ -144,6 +145,8 @@ public class DirectoryTreeBuilder {
      * @param dst the staging location
      * @throws IOException when a problem occurs during file operations
      */
+    @SuppressFBWarnings(value="COMMAND_INJECTION",
+            justification="No injection risk from absolute path args to ln -s")
     protected void stage(MavenArtifact a, File dst) throws IOException {
         File src = a.resolve();
         if (dst.exists() && dst.lastModified() == src.lastModified() && dst.length() == src.length()) {
@@ -157,16 +160,21 @@ public class DirectoryTreeBuilder {
             throw new IOException("Failed to create " + parentFile);
         }
 
+        ProcessBuilder pb = new ProcessBuilder();
         if (System.getProperty("os.name").toLowerCase(Locale.US).contains("windows")) {
             return;
         }
-        Path newLink = Paths.get(dst.getAbsolutePath());
-        Path existingFile = Paths.get(src.getAbsolutePath());
+        pb.command("ln", "-f", src.getAbsolutePath(), dst.getAbsolutePath());
+        Process p = pb.start();
         try {
-            Files.deleteIfExists(newLink);
-            Files.createSymbolicLink(newLink, existingFile);
-        } catch (IOException | UnsupportedOperationException ex) {
-            LOGGER.log(Level.WARNING, "Failed to create " + dst + " from " + src, ex);
+            if (p.waitFor() != 0) {
+                throw new IOException("'ln -f " + src.getAbsolutePath() + " " + dst.getAbsolutePath() +
+                        "' failed with code " + p.exitValue() + "\nError: " + IOUtils.toString(p.getErrorStream()) + "\nOutput: " + IOUtils.toString(p.getInputStream()));
+            } else {
+                LOGGER.log(Level.INFO, "Created new download file " + dst + " from " + src);
+            }
+        } catch (InterruptedException ex) {
+            LOGGER.log(Level.WARNING, "Interrupted creating " + dst + " from " + src, ex);
         }
 
     }
