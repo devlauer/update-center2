@@ -70,7 +70,7 @@ function execute {
   # Commonly provided system properties:
   # -DRECENT_RELEASES_MAX_AGE_HOURS=30 in case the build failed for a while
   # -DCERTIFICATE_MINIMUM_VALID_DAYS=14 in case the cert is about to expire
-  java -DCERTIFICATE_MINIMUM_VALID_DAYS=14 -Dfile.encoding=UTF-8 -jar "$MAIN_DIR"/tmp/generator/update-center2-*.jar "$@"
+  java -DRECENT_RELEASES_MAX_AGE_HOURS=24 -DCERTIFICATE_MINIMUM_VALID_DAYS=14 -Dfile.encoding=UTF-8 -jar "$MAIN_DIR"/tmp/generator/update-center2-*.jar "$@"
   # TODO once we have a new cert, no longer override the duration
 }
 
